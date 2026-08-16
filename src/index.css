@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --font-serif: Georgia, "Times New Roman", Times, serif;
+  --font-mono: ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* Formal, document-style palette, leaning fully into green: the
+     background, hairlines, and muted text all carry a green cast, and
+     model2 is a desaturated sage rather than a blue-gray — so the two
+     debate sides read as two shades of the same institutional color,
+     not green-vs-blue. */
+  --color-paper: #f1f6ee;
+  --color-paper-raised: #ffffff;
+  --color-ink: #142118;
+  --color-ink-muted: #40503f;
+  --color-ink-faint: #73826d;
+  --color-hairline: #d1ddc9;
+  --color-hairline-strong: #aec2a2;
+
+  --color-model1: #1f5c34;
+  --color-model1-soft: #e4f1e6;
+  --color-model1-border: #b1d4b8;
+
+  --color-model2: #55684a;
+  --color-model2-soft: #edf2e6;
+  --color-model2-border: #c3d1b6;
+
+  --color-gold: #8a6a1f;
+  --color-gold-soft: #f6efdc;
+  --color-gold-border: #ddc98a;
+
+  --color-danger: #8c2f2f;
+  --color-danger-soft: #f7e9e8;
+
+  --color-success: #205c37;
+  --color-success-soft: #e7f1e9;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--color-paper);
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-hairline-strong);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-model1);
+}
