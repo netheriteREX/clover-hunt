@@ -2,6 +2,7 @@ import { useState, useId } from "react";
 import * as Label from "@radix-ui/react-label";
 import { ArrowRight } from "lucide-react";
 import { EXAMPLE_QUESTIONS } from "../lib/mockDebate";
+import BlurText from "./reactbits/BlurText";
 
 export default function DebateInput({ onSubmit, loading }) {
   const [value, setValue] = useState("");
@@ -15,9 +16,13 @@ export default function DebateInput({ onSubmit, loading }) {
 
   return (
     <div className="mx-auto w-full max-w-2xl text-center">
-      <h1 className="font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-        Submit a question for review
-      </h1>
+      <BlurText
+        text="Submit a question for review"
+        as="h1"
+        animateBy="words"
+        delay={70}
+        className="justify-center font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+      />
       <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-ink-muted">
         Two models independently argue opposite sides, each citing real research.
         A third model audits the evidence quality and delivers a nuanced verdict.

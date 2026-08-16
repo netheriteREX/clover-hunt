@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { RotateCcw, TriangleAlert, Scale, History, FileDown, FileText } from "lucide-react";
+import { RotateCcw, TriangleAlert, Clover, History, FileDown, FileText } from "lucide-react";
 import DebateInput from "./components/DebateInput";
 import DebateTree from "./components/DebateTree";
 import DebateLoadingTree from "./components/DebateLoadingTree";
-import EvidenceDetail from "./components/EvidenceDetail";
 import FinalVerdict from "./components/FinalVerdict";
 import HistoryPanel from "./components/HistoryPanel";
+import BlurText from "./components/reactbits/BlurText";
+import ShinyText from "./components/reactbits/ShinyText";
 import { getHistory, saveDebateToHistory, deleteFromHistory, clearHistory } from "./lib/history";
 import { exportDebateAsPdf } from "./lib/exportPdf";
 import { exportDebateAsDocx } from "./lib/exportDocx";
@@ -30,7 +31,6 @@ export default function App() {
   const [error, setError] = useState(null);
   const [status, setStatus] = useState(IDLE_STATUS);
   const [pendingQuestion, setPendingQuestion] = useState("");
-  const [selectedEvidence, setSelectedEvidence] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState([]);
 
@@ -78,12 +78,10 @@ export default function App() {
   const reset = () => {
     setDebate(null);
     setError(null);
-    setSelectedEvidence(null);
   };
 
   const loadFromHistory = (entry) => {
     setError(null);
-    setSelectedEvidence(null);
     setDebate(entry.debate);
     setHistoryOpen(false);
   };
@@ -106,12 +104,17 @@ export default function App() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-model1-border bg-paper-raised">
-              <Scale size={18} className="text-model1" />
+              <Clover size={18} className="text-model1" />
             </span>
             <div>
-              <p className="font-serif text-[17px] font-semibold leading-tight text-ink">
-                Evidence Debate Engine
-              </p>
+              <BlurText
+                text="Clover Hunt"
+                as="p"
+                animateBy="words"
+                delay={45}
+                stepDuration={0.3}
+                className="font-serif text-[17px] font-semibold leading-tight text-ink"
+              />
               <p className="text-[11px] uppercase tracking-widest text-ink-faint">
                 Structured evidence review for policy &amp; research questions
               </p>
@@ -160,9 +163,11 @@ export default function App() {
               className="flex min-h-[60vh] flex-col items-center justify-center gap-6 py-8"
             >
               <DebateLoadingTree question={pendingQuestion} status={status} />
-              <p className="text-[11px] text-ink-faint">
-                Real research search + model reasoning — this can take a minute or two.
-              </p>
+              <ShinyText
+                text="Real research search + model reasoning — this can take a minute or two."
+                className="text-[11px]"
+                speed={2.8}
+              />
             </motion.div>
           )}
 
@@ -195,7 +200,7 @@ export default function App() {
                 </button>
               </div>
 
-              <DebateTree debate={debate} onSelectEvidence={setSelectedEvidence} />
+              <DebateTree debate={debate} />
 
               <FinalVerdict verdict={debate.model3.verdict} />
             </motion.div>
@@ -203,7 +208,6 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      <EvidenceDetail item={selectedEvidence} onClose={() => setSelectedEvidence(null)} />
       <HistoryPanel
         open={historyOpen}
         onOpenChange={setHistoryOpen}

@@ -151,7 +151,7 @@ export async function exportDebateAsDocx(debate) {
         children: [
           new Paragraph({
             heading: HeadingLevel.TITLE,
-            children: [new TextRun({ text: "Evidence Debate Engine", color: GREEN })],
+            children: [new TextRun({ text: "Clover Hunt", color: GREEN })],
           }),
           new Paragraph({
             spacing: { after: 200 },

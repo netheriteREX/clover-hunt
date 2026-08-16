@@ -80,7 +80,7 @@ export function exportDebateAsPdf(debate) {
   doc.setFont("times", "bold");
   doc.setFontSize(18);
   doc.setTextColor(...INK);
-  doc.text("Evidence Debate Engine", MARGIN, y);
+  doc.text("Clover Hunt", MARGIN, y);
   y += 20;
 
   doc.setFont("helvetica", "normal");
