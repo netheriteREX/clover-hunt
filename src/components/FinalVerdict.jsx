@@ -11,7 +11,7 @@ export default function FinalVerdict({ verdict }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.15 }}
-      className="mx-auto max-w-3xl rounded-lg border border-hairline-strong bg-paper-raised p-5 shadow-sm"
+      className="mx-auto max-w-3xl rounded-lg border border-hairline-strong bg-paper-raised p-4 shadow-sm sm:p-5"
     >
       {typeof confidence === "number" && (
         <div className="mb-4 flex items-center gap-2">
@@ -22,8 +22,15 @@ export default function FinalVerdict({ verdict }) {
         </div>
       )}
 
+      <div className="mb-2 flex items-center gap-2 text-ink-muted">
+        <Gavel size={13} />
+        <span className="text-[11px] font-semibold uppercase tracking-widest">Evidence summary</span>
+      </div>
+      <p className="text-[13.5px] leading-relaxed text-ink">{summary}</p>
+
       {argumentAssessment && (
         <>
+          <Separator.Root className="my-4 h-px bg-hairline" />
           <div className="mb-2 flex items-center gap-2 text-model1">
             <Swords size={13} />
             <span className="text-[11px] font-semibold uppercase tracking-widest">
@@ -31,15 +38,8 @@ export default function FinalVerdict({ verdict }) {
             </span>
           </div>
           <p className="font-serif text-[14px] leading-relaxed text-ink-muted">{argumentAssessment}</p>
-          <Separator.Root className="my-4 h-px bg-hairline" />
         </>
       )}
-
-      <div className="mb-2 flex items-center gap-2 text-ink-muted">
-        <Gavel size={13} />
-        <span className="text-[11px] font-semibold uppercase tracking-widest">Evidence summary</span>
-      </div>
-      <p className="text-[13.5px] leading-relaxed text-ink">{summary}</p>
 
       {nuances?.length > 0 && (
         <div className="mt-4">

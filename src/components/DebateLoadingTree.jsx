@@ -6,52 +6,32 @@ const SIDE_STYLE = {
   model2: { accent: "#55684a", bg: "bg-model2-soft", border: "border-model2-border", text: "text-model2", dot: "#55684a" },
 };
 
-// SVG "drawing" connector: same Y-shape as the real tree's connector, but
-// each segment animates its own pathLength on a loop so it visibly redraws
-// itself instead of sitting static — the tell that something is happening.
+// SVG "drawing" connector: a single segment that animates its own
+// pathLength on a loop so it visibly redraws itself instead of sitting
+// static — the tell that something is happening. Kept as a plain vertical
+// line (rather than branching toward two fixed side columns) so the same
+// geometry reads correctly whether the columns below are side-by-side
+// (desktop) or stacked (mobile).
 function DrawingConnector({ height = 40, delay = 0 }) {
   const draw = { pathLength: [0, 1, 1], opacity: [0.25, 1, 0.25] };
-  const transition = (extraDelay) => ({
+  const transition = {
     duration: 1.6,
     repeat: Infinity,
     repeatDelay: 0.6,
     ease: "easeInOut",
-    delay: delay + extraDelay,
-  });
+    delay,
+  };
 
   return (
-    <svg
-      viewBox="0 0 100 40"
-      preserveAspectRatio="none"
-      className="mx-auto w-full"
-      style={{ height }}
-    >
+    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mx-auto w-full" style={{ height }}>
       <motion.path
-        d="M50,0 L50,20"
+        d="M50,0 L50,40"
         fill="none"
         stroke="#1f5c34"
         strokeWidth="1"
         vectorEffect="non-scaling-stroke"
         animate={draw}
-        transition={transition(0)}
-      />
-      <motion.path
-        d="M50,20 L25,20 L25,40"
-        fill="none"
-        stroke="#1f5c34"
-        strokeWidth="1"
-        vectorEffect="non-scaling-stroke"
-        animate={draw}
-        transition={transition(0.35)}
-      />
-      <motion.path
-        d="M50,20 L75,20 L75,40"
-        fill="none"
-        stroke="#55684a"
-        strokeWidth="1"
-        vectorEffect="non-scaling-stroke"
-        animate={draw}
-        transition={transition(0.35)}
+        transition={transition}
       />
     </svg>
   );
@@ -64,7 +44,7 @@ function ShimmerChip({ index, color }) {
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
       transition={{ delay: 0.25 * index, duration: 0.35 }}
-      className="relative h-7 w-[104px] overflow-hidden rounded-full border border-hairline bg-paper-raised"
+      className="relative h-7 w-full max-w-[140px] overflow-hidden rounded-full border border-hairline bg-paper-raised sm:w-[104px]"
     >
       <motion.div
         className="absolute inset-y-0 w-1/2"
@@ -87,7 +67,7 @@ function SettledChip({ index, color }) {
       initial={{ opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: "spring", stiffness: 420, damping: 16, delay: index * 0.07 }}
-      className="flex h-7 w-[104px] items-center justify-center gap-1 rounded-full border"
+      className="flex h-7 w-full max-w-[140px] items-center justify-center gap-1 rounded-full border sm:w-[104px]"
       style={{ borderColor: color, backgroundColor: `${color}16` }}
     >
       <Check size={11} strokeWidth={3} style={{ color }} />
@@ -176,7 +156,7 @@ export default function DebateLoadingTree({ question, status }) {
 
       <DrawingConnector height={36} />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <SideColumn sideKey="model1" status={status.model1} />
         <SideColumn sideKey="model2" status={status.model2} />
       </div>

@@ -21,7 +21,7 @@ export default function DebateInput({ onSubmit, loading }) {
         as="h1"
         animateBy="words"
         delay={70}
-        className="justify-center font-serif text-3xl font-semibold tracking-tight text-ink sm:text-4xl"
+        className="justify-center font-serif text-2xl font-semibold tracking-tight text-ink sm:text-3xl md:text-4xl"
       />
       <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-ink-muted">
         Two models independently argue opposite sides, each citing real research.
@@ -47,7 +47,7 @@ export default function DebateInput({ onSubmit, loading }) {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="e.g. Does social media cause teenagers to become less social?"
-            className="flex-1 bg-transparent px-2.5 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
+            className="min-w-0 flex-1 bg-transparent px-2.5 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
           />
           <button
             type="submit"
@@ -72,7 +72,7 @@ export default function DebateInput({ onSubmit, loading }) {
                 setValue(q);
                 submit(q);
               }}
-              className="rounded-md border border-hairline bg-paper-raised px-3 py-1.5 text-[12px] text-ink-muted transition hover:border-model1-border hover:text-model1"
+              className="max-w-full rounded-md border border-hairline bg-paper-raised px-3 py-1.5 text-left text-[12px] text-ink-muted transition hover:border-model1-border hover:text-model1"
             >
               {q}
             </button>

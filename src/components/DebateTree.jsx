@@ -155,6 +155,44 @@ function ScoreBar({ icon: Icon, label, score }) {
   );
 }
 
+// Mobile fallback for CitationDot — the coordinate-canvas diagram is a
+// desktop paradigm (fixed-px hub labels + percentage positions collide at
+// phone widths), so below `md` we render evidence as plain flex-wrap chips
+// in normal document flow instead, sharing the same onSelect -> FocusView
+// interaction as the desktop diagram.
+function MobileEvidenceChip({ arg, critique, side, onSelect }) {
+  const color = qualityColor(critique?.argumentScore ?? critique?.qualityScore);
+  return (
+    <button
+      onClick={() => onSelect({ side, arg, critique, color })}
+      className="flex items-center gap-2 rounded-full border border-hairline bg-paper px-3 py-1.5 text-left shadow-sm active:scale-95"
+    >
+      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+      <span className="text-[12px] text-ink-muted">
+        {arg.citation.authors.split(",")[0]} '{String(arg.citation.year).slice(-2)}
+      </span>
+    </button>
+  );
+}
+
+function MobileSideCard({ sideKey, model, critiques, onSelect }) {
+  const style = SIDE_STYLE[sideKey];
+  const critiqueFor = (argId) => critiques?.find((c) => c.side === sideKey && c.argumentId === argId);
+  return (
+    <div className={`rounded-lg border ${style.border} ${style.bg} p-4 shadow-sm`}>
+      <p className={`text-[10px] font-semibold uppercase tracking-widest ${style.text}`}>
+        {sideKey === "model1" ? "Model 1" : "Model 2"}
+      </p>
+      <p className="mt-0.5 text-[14px] font-semibold text-ink">{model.side}</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {model.arguments.map((arg) => (
+          <MobileEvidenceChip key={arg.id} arg={arg} critique={critiqueFor(arg.id)} side={sideKey} onSelect={onSelect} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Full focus takeover — the rest of the network is faded out entirely (see
 // DebateTree below) and this is the only thing left on screen: one big
 // hollow node and its write-up, nothing else competing for attention.
@@ -296,7 +334,40 @@ export default function DebateTree({ debate }) {
 
   return (
     <Tooltip.Provider>
-      <div ref={containerRef} className="relative mx-auto w-full max-w-4xl" style={{ minHeight: "220vh" }}>
+      {/* Mobile: the coordinate-canvas diagram below relies on fixed-px
+          labels sitting at absolute percentage positions, which collide by
+          construction at phone widths — so below `md` we swap in a plain
+          stacked flow layout instead of trying to patch the canvas. */}
+      <div className="mx-auto flex w-full max-w-xl flex-col gap-5 md:hidden">
+        <div className="rounded-lg border border-hairline-strong bg-paper-raised px-5 py-3 text-center shadow-sm">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-ink-faint">Question</p>
+          <p className="mt-0.5 font-serif text-[15px] font-medium leading-snug text-ink">{question}</p>
+        </div>
+
+        <MobileSideCard sideKey="model1" model={model1} critiques={model3.critiques} onSelect={setSelected} />
+        <MobileSideCard sideKey="model2" model={model2} critiques={model3.critiques} onSelect={setSelected} />
+
+        <div className={`flex items-center gap-3 rounded-lg border ${winnerStyle.border} ${winnerStyle.bg} px-5 py-4 text-left shadow-sm`}>
+          <Gavel size={20} className={`shrink-0 ${winnerStyle.text}`} />
+          <div>
+            <p className={`text-[10px] font-semibold uppercase tracking-widest ${winnerStyle.text}`}>
+              Model 3 · Verdict · <CountUp to={verdict.confidence} suffix="%" duration={1} /> confidence
+            </p>
+            <p className="mt-0.5 text-[14px] font-medium text-ink">
+              {verdict.winningSide === "mixed"
+                ? "Mixed — both sides argued well"
+                : verdict.winningSide === "model1"
+                  ? `${model1.side} — the stronger argument`
+                  : `${model2.side} — the stronger argument`}
+            </p>
+          </div>
+        </div>
+
+        <p className="text-center text-[11px] text-ink-faint">Tap any evidence chip to inspect it</p>
+      </div>
+
+      {/* Desktop / tablet: the full "neural network" diagram */}
+      <div ref={containerRef} className="relative mx-auto hidden w-full max-w-4xl md:block" style={{ minHeight: "220vh" }}>
       <motion.div
         animate={{ opacity: selected ? 0 : 1 }}
         transition={{ duration: 0.25 }}
@@ -410,11 +481,11 @@ export default function DebateTree({ debate }) {
           Click any evidence node to inspect it
         </p>
       </motion.div>
+      </div>
 
       <AnimatePresence>
         {selected && <FocusView item={selected} onClose={() => setSelected(null)} />}
       </AnimatePresence>
-      </div>
     </Tooltip.Provider>
   );
 }

@@ -77,7 +77,7 @@ export default function HistoryPanel({ open, onOpenChange, entries, onLoad, onDe
                       <button
                         onClick={() => onDelete(entry.id)}
                         aria-label="Delete"
-                        className="shrink-0 rounded p-1.5 text-ink-faint hover:bg-danger-soft hover:text-danger"
+                        className="shrink-0 rounded p-2 text-ink-faint hover:bg-danger-soft hover:text-danger"
                       >
                         <Trash2 size={14} />
                       </button>

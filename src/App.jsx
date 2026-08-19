@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { RotateCcw, TriangleAlert, Clover, History, FileDown, FileText } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { RotateCcw, TriangleAlert, Clover, History, Download, FileDown, FileText, ChevronDown } from "lucide-react";
 import DebateInput from "./components/DebateInput";
 import DebateTree from "./components/DebateTree";
 import DebateLoadingTree from "./components/DebateLoadingTree";
@@ -101,40 +102,27 @@ export default function App() {
       <div className="h-1.5 bg-model1" />
 
       <header className="border-b border-hairline bg-model1-soft">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-model1-border bg-paper-raised">
-              <Clover size={18} className="text-model1" />
-            </span>
-            <div>
-              <BlurText
-                text="Clover Hunt"
-                as="p"
-                animateBy="words"
-                delay={45}
-                stepDuration={0.3}
-                className="font-serif text-[17px] font-semibold leading-tight text-ink"
-              />
-              <p className="text-[11px] uppercase tracking-widest text-ink-faint">
-                Structured evidence review for policy &amp; research questions
-              </p>
-            </div>
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-4 sm:px-6">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-model1-border bg-paper-raised">
+            <Clover size={18} className="text-model1" />
+          </span>
+          <div className="min-w-0">
+            <BlurText
+              text="Clover Hunt"
+              as="p"
+              animateBy="words"
+              delay={45}
+              stepDuration={0.3}
+              className="font-serif text-[17px] font-semibold leading-tight text-ink"
+            />
+            <p className="text-[9px] uppercase tracking-widest text-ink-faint sm:text-[11px]">
+              Structured evidence review for policy &amp; research questions
+            </p>
           </div>
-          <button
-            onClick={() => setHistoryOpen(true)}
-            className="flex shrink-0 items-center gap-1.5 rounded-md border border-model1-border bg-paper-raised px-3 py-2 text-[12px] font-medium text-ink-muted transition hover:border-model1 hover:text-model1"
-          >
-            <History size={14} /> History
-            {history.length > 0 && (
-              <span className="rounded-full bg-model1-soft px-1.5 py-0.5 text-[10px] font-semibold text-model1">
-                {history.length}
-              </span>
-            )}
-          </button>
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
         <AnimatePresence mode="wait">
           {!debate && !loading && (
             <motion.div
@@ -179,25 +167,58 @@ export default function App() {
               transition={{ duration: 0.4 }}
               className="space-y-8"
             >
-              <div className="flex flex-wrap justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
-                  onClick={() => exportDebateAsPdf(debate)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-hairline-strong bg-paper-raised px-3 py-2 text-[12px] font-medium text-ink-muted transition hover:border-model1-border hover:text-model1"
+                  onClick={() => setHistoryOpen(true)}
+                  aria-label="History"
+                  className="relative flex shrink-0 items-center justify-center rounded-md border border-hairline-strong bg-paper-raised p-2 text-ink-muted transition hover:border-model1-border hover:text-model1"
                 >
-                  <FileDown size={13} /> Export PDF
+                  <History size={16} />
+                  {history.length > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 rounded-full bg-model1-soft px-1.5 py-0.5 text-[10px] font-semibold text-model1">
+                      {history.length}
+                    </span>
+                  )}
                 </button>
-                <button
-                  onClick={() => exportDebateAsDocx(debate)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-hairline-strong bg-paper-raised px-3 py-2 text-[12px] font-medium text-ink-muted transition hover:border-model1-border hover:text-model1"
-                >
-                  <FileText size={13} /> Export Word
-                </button>
+                <div className="flex flex-wrap justify-end gap-2">
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger asChild>
+                    <button
+                      aria-label="Export"
+                      className="flex shrink-0 items-center gap-1.5 rounded-md border border-hairline-strong bg-paper-raised px-3 py-2 text-[11px] font-medium text-ink-muted transition hover:border-model1-border hover:text-model1 sm:text-[12px]"
+                    >
+                      <Download size={13} /> <span>Export</span> <ChevronDown size={12} />
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Portal>
+                    <DropdownMenu.Content
+                      align="end"
+                      sideOffset={6}
+                      className="z-50 min-w-[160px] rounded-md border border-hairline-strong bg-paper-raised p-1 shadow-lg"
+                    >
+                      <DropdownMenu.Item
+                        onSelect={() => exportDebateAsPdf(debate)}
+                        className="flex cursor-pointer items-center gap-2 rounded px-2.5 py-2 text-[12px] text-ink-muted outline-none transition hover:bg-model1-soft hover:text-model1 data-[highlighted]:bg-model1-soft data-[highlighted]:text-model1"
+                      >
+                        <FileDown size={13} /> Export PDF
+                      </DropdownMenu.Item>
+                      <DropdownMenu.Item
+                        onSelect={() => exportDebateAsDocx(debate)}
+                        className="flex cursor-pointer items-center gap-2 rounded px-2.5 py-2 text-[12px] text-ink-muted outline-none transition hover:bg-model1-soft hover:text-model1 data-[highlighted]:bg-model1-soft data-[highlighted]:text-model1"
+                      >
+                        <FileText size={13} /> Export Word
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Portal>
+                </DropdownMenu.Root>
                 <button
                   onClick={reset}
-                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-hairline-strong bg-paper-raised px-3 py-2 text-[12px] font-medium text-ink-muted transition hover:border-model1-border hover:text-model1"
+                  aria-label="New question"
+                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-hairline-strong bg-paper-raised px-3 py-2 text-[11px] font-medium text-ink-muted transition hover:border-model1-border hover:text-model1 sm:text-[12px]"
                 >
-                  <RotateCcw size={13} /> New question
+                  <RotateCcw size={13} /> <span className="sm:inline">New question</span>
                 </button>
+                </div>
               </div>
 
               <DebateTree debate={debate} />
