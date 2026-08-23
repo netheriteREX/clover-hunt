@@ -1,7 +1,7 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { Gavel, X, ExternalLink, AlertTriangle, CheckCircle2, Swords, Scale } from "lucide-react";
+import { Gavel, X, ExternalLink, AlertTriangle, CheckCircle2, Swords, Scale, Flag, Loader2 } from "lucide-react";
 import CountUp from "./reactbits/CountUp";
 import BlurText from "./reactbits/BlurText";
 
@@ -36,8 +36,23 @@ function spread(count, center) {
 // faint "signal" travelling along it.
 function Wire({ x1, y1, x2, y2, color, delay = 0, flowDuration = 3 }) {
   const path = `M ${x1} ${y1} L ${x2} ${y2}`;
+  // useId()'s colons are valid HTML but unreliable inside an SVG url(#...)
+  // reference in some browsers — strip them for a plain alphanumeric id.
+  const gradientId = `wire-gradient-${useId().replace(/:/g, "")}`;
   return (
     <g>
+      <defs>
+        {/* Gradient runs along the wire's own direction (userSpaceOnUse +
+            the wire's own x1/y1/x2/y2), so each travelling "pulse" fades
+            in from the source and out toward the destination instead of
+            being a flat-colored dash. */}
+        <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1={x1} y1={y1} x2={x2} y2={y2}>
+          <stop offset="0%" stopColor={color} stopOpacity="0" />
+          <stop offset="45%" stopColor={color} stopOpacity="1" />
+          <stop offset="55%" stopColor={GOLD} stopOpacity="1" />
+          <stop offset="100%" stopColor={GOLD} stopOpacity="0" />
+        </linearGradient>
+      </defs>
       <motion.path
         d={path}
         fill="none"
@@ -52,8 +67,8 @@ function Wire({ x1, y1, x2, y2, color, delay = 0, flowDuration = 3 }) {
       <motion.path
         d={path}
         fill="none"
-        stroke={color}
-        strokeWidth={0.4}
+        stroke={`url(#${gradientId})`}
+        strokeWidth={0.22}
         strokeLinecap="round"
         strokeDasharray="2.5 8"
         initial={{ strokeDashoffset: 0, opacity: 0 }}
@@ -97,7 +112,7 @@ function HubNode({ x, y, sideKey, model, delay }) {
         </span>
       </div>
       <div className={`w-40 rounded-md border ${style.border} ${style.bg} px-3 py-1.5 text-center shadow-sm`}>
-        <p className={`text-[9px] font-semibold uppercase tracking-widest ${style.text}`}>
+        <p className={`text-[10px] font-semibold uppercase tracking-widest ${style.text}`}>
           {sideKey === "model1" ? "Model 1" : "Model 2"}
         </p>
         <p className="text-[12px] font-semibold text-ink">{model.side}</p>
@@ -165,7 +180,7 @@ function MobileEvidenceChip({ arg, critique, side, onSelect }) {
   return (
     <button
       onClick={() => onSelect({ side, arg, critique, color })}
-      className="flex items-center gap-2 rounded-full border border-hairline bg-paper px-3 py-1.5 text-left shadow-sm active:scale-95"
+      className="flex items-center gap-2 rounded-full border border-hairline bg-paper px-3 py-1.5 text-left shadow-sm transition hover:border-hairline-strong hover:shadow active:scale-95"
     >
       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
       <span className="text-[12px] text-ink-muted">
@@ -196,7 +211,76 @@ function MobileSideCard({ sideKey, model, critiques, onSelect }) {
 // Full focus takeover — the rest of the network is faded out entirely (see
 // DebateTree below) and this is the only thing left on screen: one big
 // hollow node and its write-up, nothing else competing for attention.
-function FocusView({ item, onClose }) {
+function FlagCitation({ side, arg, onFlag, onClose }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [status, setStatus] = useState("idle"); // idle | submitting | done | error
+
+  if (!onFlag) return null;
+
+  const submit = async () => {
+    if (!reason.trim()) return;
+    setStatus("submitting");
+    try {
+      await onFlag(side, arg.id, reason.trim());
+      setStatus("done");
+      setTimeout(onClose, 1100);
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (status === "done") {
+    return (
+      <div className="mx-auto mt-6 max-w-sm rounded-md border border-success/30 bg-success/10 px-3 py-2 text-center text-[12px] text-success">
+        Thanks — Model 3 is reconsidering this argument.
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="mx-auto mt-6 flex items-center gap-1.5 text-[11px] font-medium text-ink-faint transition hover:text-danger"
+      >
+        <Flag size={11} /> Flag this citation as wrong or misused
+      </button>
+    );
+  }
+
+  return (
+    <div className="mx-auto mt-6 max-w-sm text-left">
+      <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-danger">
+        <Flag size={11} /> What's wrong with this citation?
+      </p>
+      <textarea
+        autoFocus
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="e.g. this study doesn't actually show that, or the sample size is too small to support this claim"
+        rows={3}
+        className="w-full rounded-md border border-hairline-strong bg-paper px-3 py-2 text-[12.5px] text-ink placeholder:text-ink-faint focus:outline-none"
+      />
+      {status === "error" && <p className="mt-1 text-[11px] text-danger">Something went wrong — try again.</p>}
+      <div className="mt-2 flex justify-end gap-2">
+        <button onClick={() => setOpen(false)} className="px-2 py-1 text-[11px] text-ink-faint hover:text-ink">
+          Cancel
+        </button>
+        <button
+          onClick={submit}
+          disabled={!reason.trim() || status === "submitting"}
+          className="flex items-center gap-1.5 rounded-md bg-danger px-3 py-1.5 text-[11px] font-medium text-white transition disabled:opacity-50"
+        >
+          {status === "submitting" && <Loader2 size={11} className="animate-spin" />}
+          {status === "submitting" ? "Re-judging…" : "Submit flag"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FocusView({ item, onClose, onFlag }) {
   const { side, arg, critique, color } = item;
   return (
     <motion.div
@@ -267,7 +351,7 @@ function FocusView({ item, onClose }) {
 
               {critique.reasoningFlaws?.length > 0 && (
                 <div className="mt-3 space-y-1">
-                  <p className="text-[9.5px] font-semibold uppercase tracking-widest text-ink-faint">Reasoning</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-ink-faint">Reasoning</p>
                   {critique.reasoningFlaws.map((f, i) => (
                     <div key={i} className="flex items-start gap-1.5 text-[12px] text-danger">
                       <AlertTriangle size={11} className="mt-0.5 shrink-0" />
@@ -294,13 +378,15 @@ function FocusView({ item, onClose }) {
               {critique.notes && <p className="mt-2 text-[12px] italic text-ink-faint">{critique.notes}</p>}
             </div>
           )}
+
+          <FlagCitation side={side} arg={arg} onFlag={onFlag} onClose={onClose} />
         </motion.div>
       </div>
     </motion.div>
   );
 }
 
-export default function DebateTree({ debate }) {
+export default function DebateTree({ debate, onFlag }) {
   const { question, model1, model2, model3 } = debate;
   const { verdict } = model3;
   const critiqueFor = (side, argId) => model3.critiques?.find((c) => c.side === side && c.argumentId === argId);
@@ -484,7 +570,7 @@ export default function DebateTree({ debate }) {
       </div>
 
       <AnimatePresence>
-        {selected && <FocusView item={selected} onClose={() => setSelected(null)} />}
+        {selected && <FocusView item={selected} onClose={() => setSelected(null)} onFlag={onFlag} />}
       </AnimatePresence>
     </Tooltip.Provider>
   );

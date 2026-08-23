@@ -143,8 +143,23 @@ export default function DebateLoadingTree({ question, status }) {
   const bothDone = status.model1 === "done" && status.model2 === "done";
   const judgeText = status.judge === "working" ? "Auditing the evidence…" : "Waiting for both sides";
 
+  // Everything below is purely visual (shimmering chips, drawing lines) —
+  // screen-reader users get no equivalent signal without this, so the
+  // current stage is announced here as it changes.
+  const liveStatus =
+    status.judge === "done"
+      ? "Review complete."
+      : status.judge === "working"
+        ? "Both sides argued. Model 3 is auditing the evidence."
+        : status.model1 === "done" && status.model2 === "done"
+          ? "Both sides finished arguing."
+          : "Searching real research and building each side's argument.";
+
   return (
     <div className="mx-auto w-full max-w-4xl">
+      <p role="status" aria-live="polite" className="sr-only">
+        {liveStatus}
+      </p>
       <div className="flex justify-center">
         <div className="max-w-xl rounded-lg border border-hairline-strong bg-paper-raised px-6 py-3 text-center shadow-sm">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-ink-faint">
@@ -167,27 +182,50 @@ export default function DebateLoadingTree({ question, status }) {
         <motion.div
           animate={
             bothDone
-              ? { borderColor: ["#ddc98a55", "#ddc98aff", "#ddc98a55"] }
-              : { borderColor: "#ddc98a55" }
+              ? { borderColor: ["#d4c5e055", "#d4c5e0ff", "#d4c5e055"] }
+              : { borderColor: "#d4c5e055" }
           }
           transition={{ repeat: bothDone ? Infinity : 0, duration: bothDone ? 1 : 0 }}
           className="flex max-w-md items-center gap-3 rounded-lg border border-gold-border bg-gold-soft px-6 py-4 text-left shadow-sm"
         >
-          <motion.div
-            animate={{ rotate: [0, -12, 0, 12, 0] }}
-            transition={{
-              repeat: Infinity,
-              duration: bothDone ? 0.9 : 1.8,
-              ease: "easeInOut",
-            }}
-          >
-            <Gavel size={20} className="shrink-0 text-gold" />
-          </motion.div>
-          <div>
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+            {bothDone && (
+              <motion.span
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: "conic-gradient(from 0deg, transparent, #8559a5 55%, transparent)",
+                  WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.5px))",
+                  mask: "radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.5px))",
+                }}
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1.1, ease: "linear" }}
+              />
+            )}
+            <motion.div
+              animate={{ rotate: [0, -12, 0, 12, 0] }}
+              transition={{
+                repeat: Infinity,
+                duration: bothDone ? 0.9 : 1.8,
+                ease: "easeInOut",
+              }}
+            >
+              <Gavel size={20} className="shrink-0 text-gold" />
+            </motion.div>
+          </div>
+          <div className="flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-gold">
               Model 3 · {bothDone ? "Working" : "Waiting"}
             </p>
             <p className="mt-0.5 text-[13px] text-ink-muted">{judgeText}</p>
+            {bothDone && (
+              <div className="relative mt-2 h-1 w-full max-w-[180px] overflow-hidden rounded-full bg-gold-border/50">
+                <motion.div
+                  className="absolute inset-y-0 w-1/3 rounded-full bg-gold"
+                  animate={{ x: ["-100%", "300%"] }}
+                  transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+                />
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

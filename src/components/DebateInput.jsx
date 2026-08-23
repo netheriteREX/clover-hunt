@@ -1,8 +1,11 @@
 import { useState, useId } from "react";
+import { motion } from "framer-motion";
 import * as Label from "@radix-ui/react-label";
 import { ArrowRight } from "lucide-react";
 import { EXAMPLE_QUESTIONS } from "../lib/mockDebate";
 import BlurText from "./reactbits/BlurText";
+import BorderGlow from "./reactbits/BorderGlow";
+import SpecularButton from "./reactbits/SpecularButton";
 
 export default function DebateInput({ onSubmit, loading }) {
   const [value, setValue] = useState("");
@@ -41,23 +44,53 @@ export default function DebateInput({ onSubmit, loading }) {
         >
           Question
         </Label.Root>
-        <div className="flex items-center gap-2 rounded-lg border border-hairline-strong bg-paper-raised p-1.5 shadow-sm focus-within:border-model1">
-          <input
-            id={inputId}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="e.g. Does social media cause teenagers to become less social?"
-            className="min-w-0 flex-1 bg-transparent px-2.5 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={loading || !value.trim()}
-            className="flex items-center gap-1.5 rounded-md bg-model1 px-4 py-2 text-sm font-medium text-white transition hover:bg-model1/90 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {loading ? "Reviewing…" : "Review"}
-            {!loading && <ArrowRight size={14} />}
-          </button>
-        </div>
+        <BorderGlow
+          backgroundColor="#ffffff"
+          borderRadius={12}
+          glowRadius={26}
+          glowColor="141 55% 45%"
+          colors={["#1f5c34", "#55684a", "#8559a5"]}
+        >
+          <div className="flex items-center gap-2 p-1.5">
+            <input
+              id={inputId}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="e.g. Does social media cause teenagers to become less social?"
+              className="min-w-0 flex-1 bg-transparent px-2.5 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
+            />
+            <SpecularButton
+              type="submit"
+              disabled={loading || !value.trim()}
+              size="sm"
+              radius={8}
+              tint="#1f5c34"
+              tintOpacity={1}
+              baseColor="#1f5c34"
+              lineColor="#ffffff"
+              textColor="#ffffff"
+              intensity={1.3}
+              shineSize={8}
+              shineFade={35}
+              thickness={0.6}
+              speed={0.5}
+              autoAnimate
+            >
+              <motion.span initial="rest" whileHover="hover" animate="rest" className="flex items-center">
+                <span>{loading ? "Reviewing…" : "Review"}</span>
+                {!loading && (
+                  <motion.span
+                    variants={{ rest: { width: 0, opacity: 0, marginLeft: 0 }, hover: { width: 14, opacity: 1, marginLeft: 6 } }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="flex overflow-hidden"
+                  >
+                    <ArrowRight size={14} />
+                  </motion.span>
+                )}
+              </motion.span>
+            </SpecularButton>
+          </div>
+        </BorderGlow>
       </form>
 
       <div className="mt-5 text-left">

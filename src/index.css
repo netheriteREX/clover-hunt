@@ -9,7 +9,7 @@
      background, hairlines, and muted text all carry a green cast, and
      model2 is a desaturated sage rather than a blue-gray — so the two
      debate sides read as two shades of the same institutional color,
-     not green-vs-blue. */
+     not green-vs-blue. The third accent (previously gold) is now purple. */
   --color-paper: #f1f6ee;
   --color-paper-raised: #ffffff;
   --color-ink: #142118;
@@ -26,15 +26,45 @@
   --color-model2-soft: #edf2e6;
   --color-model2-border: #c3d1b6;
 
-  --color-gold: #8a6a1f;
-  --color-gold-soft: #f6efdc;
-  --color-gold-border: #ddc98a;
+  --color-gold: #8559a5;
+  --color-gold-soft: #f0ebf4;
+  --color-gold-border: #d4c5e0;
 
   --color-danger: #8c2f2f;
   --color-danger-soft: #f7e9e8;
 
   --color-success: #205c37;
   --color-success-soft: #e7f1e9;
+}
+
+/* Fact Check mode recolors everything outside the logo header to lavender —
+   overriding the theme's CSS custom properties in a scoped subtree lets
+   every existing Tailwind utility built on them (bg-model1-soft,
+   border-hairline, text-ink-muted, focus rings, etc.) pick up the new
+   colors automatically, with no per-component changes needed. The header
+   rule below re-establishes the original green scoped to itself, since it
+   sits inside the same lavender-scoped subtree but must stay untouched. */
+[data-theme="lavender"] {
+  --color-paper: #f6f2fa;
+  --color-ink-muted: #4a4356;
+  --color-ink-faint: #7a7186;
+  --color-hairline: #e0d5ea;
+  --color-hairline-strong: #c7b3d9;
+
+  --color-model1: #8559a5;
+  --color-model1-soft: #f0ebf4;
+  --color-model1-border: #d4c5e0;
+}
+
+[data-theme="lavender"] header {
+  --color-ink-muted: #40503f;
+  --color-ink-faint: #73826d;
+  --color-hairline: #d1ddc9;
+  --color-hairline-strong: #aec2a2;
+
+  --color-model1: #1f5c34;
+  --color-model1-soft: #e4f1e6;
+  --color-model1-border: #b1d4b8;
 }
 
 html {
@@ -51,6 +81,21 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+/* A single, consistent keyboard-focus treatment for every interactive
+   element (buttons, links, inputs) — without this, tabbing through the
+   app leaves no visible indication of where focus is, which fails WCAG's
+   keyboard-navigation guidance. Skipped for mouse/touch clicks via
+   :focus-visible so it doesn't add a ring on every pointer click. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[role="button"]:focus-visible,
+[role="menuitem"]:focus-visible {
+  outline: 2px solid var(--color-model1);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar {

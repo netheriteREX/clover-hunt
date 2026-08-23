@@ -7,7 +7,7 @@ const PAGE_HEIGHT = 792;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 const GREEN = [31, 92, 52];
 const SAGE = [85, 104, 74];
-const GOLD = [138, 106, 31];
+const GOLD = [133, 89, 165];
 const INK = [20, 33, 24];
 const INK_MUTED = [64, 80, 63];
 

@@ -20,9 +20,21 @@ export async function searchPapers(query, limit = 4) {
   const params = new URLSearchParams({
     search: query,
     per_page: String(limit),
-    // Only keep works that actually have an abstract — otherwise the
-    // debater has nothing real to reason about.
-    filter: "has_abstract:true",
+    // Only keep works that actually have an abstract (otherwise the
+    // debater has nothing real to reason about), hard-exclude retracted
+    // papers, and exclude preprints — no amount of prompt instruction
+    // reliably stops a model from picking a weak source if it's simply
+    // never offered one; preprints haven't been peer reviewed and are a
+    // frequent source of low judge quality scores.
+    filter: "has_abstract:true,is_retracted:false,type:!preprint",
+    // Deliberately NOT sorting by cited_by_count here: that would replace
+    // OpenAlex's relevance ranking for the `search` term with pure
+    // citation count, which surfaces loosely-related blockbuster papers
+    // ahead of directly on-topic ones (e.g. an air-pollution/productivity
+    // study outranking actual remote-work studies for a "remote work
+    // productivity" query, purely because it has more citations). Topical
+    // relevance has to come first — citation count is only used as a
+    // secondary quality signal once results are already on-topic.
   });
   if (process.env.OPENALEX_MAILTO) params.set("mailto", process.env.OPENALEX_MAILTO);
   if (process.env.OPENALEX_API_KEY) params.set("api_key", process.env.OPENALEX_API_KEY);
@@ -55,33 +67,6 @@ export async function searchPapers(query, limit = 4) {
       venue: w.primary_location?.source?.display_name || "Unknown venue",
       abstract: reconstructAbstract(w.abstract_inverted_index),
       url: w.doi || w.id,
+      citedByCount: w.cited_by_count ?? 0,
     }));
-}
-
-// Runs several search queries and merges the results, deduping by paper id.
-// One query's failure doesn't sink the rest — a debater can still work with
-// a partial paper set.
-export async function searchManyQueries(queries, perQuery = 4) {
-  console.log(`[search] running ${queries.length} queries:`, queries);
-
-  const results = await Promise.all(
-    queries.map((q) =>
-      searchPapers(q, perQuery).catch((err) => {
-        console.error(`[search] query "${q}" threw:`, err.message);
-        return [];
-      }),
-    ),
-  );
-  const seen = new Set();
-  const merged = [];
-  for (const list of results) {
-    for (const paper of list) {
-      const key = paper.id || paper.title;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      merged.push(paper);
-    }
-  }
-  console.log(`[search] merged total: ${merged.length} unique papers`);
-  return merged;
 }

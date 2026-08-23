@@ -11,7 +11,7 @@ import { reportFilename } from "./reportContent.js";
 
 const GREEN = "1F5C34";
 const SAGE = "55684A";
-const GOLD = "8A6A1F";
+const GOLD = "8559A5";
 const DANGER = "8C2F2F";
 const INK = "142118";
 const INK_MUTED = "40503F";

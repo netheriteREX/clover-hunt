@@ -4,29 +4,45 @@ import { Swords, Gavel, Sparkles } from "lucide-react";
 import CountUp from "./reactbits/CountUp";
 
 export default function FinalVerdict({ verdict }) {
-  const { argumentAssessment, summary, nuances, confidence } = verdict;
+  const { argumentAssessment, summary, nuances, confidence, winningSide } = verdict;
+
+  // This card is the actual answer to the user's question — the payoff of
+  // the whole flow — so it's given the strongest visual weight on the page
+  // (accent border/badge, largest heading) rather than reading as just
+  // another secondary card like the citations above it. Tailwind's static
+  // scanner needs literal class names, so this is a lookup map (same
+  // pattern DebateTree.jsx uses for its SIDE_STYLE/winnerStyle), not
+  // template-interpolated class strings.
+  const ACCENT_STYLE = {
+    model1: { border: "border-model1-border", bg: "bg-model1-soft", text: "text-model1" },
+    model2: { border: "border-model2-border", bg: "bg-model2-soft", text: "text-model2" },
+    gold: { border: "border-gold-border", bg: "bg-gold-soft", text: "text-gold" },
+  };
+  const accent = ACCENT_STYLE[winningSide] || ACCENT_STYLE.gold;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.15 }}
-      className="mx-auto max-w-3xl rounded-lg border border-hairline-strong bg-paper-raised p-4 shadow-sm sm:p-5"
+      className={`mx-auto max-w-3xl rounded-lg border-2 ${accent.border} bg-paper-raised p-5 shadow-md sm:p-6`}
     >
-      {typeof confidence === "number" && (
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-ink-faint">Confidence</span>
-          <span className="font-serif text-[20px] font-semibold text-gold">
-            <CountUp to={confidence} suffix="%" duration={1} />
-          </span>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className={`flex items-center gap-2 rounded-md ${accent.bg} px-2.5 py-1.5`}>
+          <Gavel size={15} className={accent.text} />
+          <span className={`text-[12px] font-bold uppercase tracking-widest ${accent.text}`}>Final verdict</span>
         </div>
-      )}
-
-      <div className="mb-2 flex items-center gap-2 text-ink-muted">
-        <Gavel size={13} />
-        <span className="text-[11px] font-semibold uppercase tracking-widest">Evidence summary</span>
+        {typeof confidence === "number" && (
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-ink-muted">Confidence</span>
+            <span className="font-serif text-[24px] font-bold leading-none text-gold">
+              <CountUp to={confidence} suffix="%" duration={1} />
+            </span>
+          </div>
+        )}
       </div>
-      <p className="text-[13.5px] leading-relaxed text-ink">{summary}</p>
+
+      <p className="text-[14.5px] font-medium leading-relaxed text-ink">{summary}</p>
 
       {argumentAssessment && (
         <>
