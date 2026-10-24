@@ -23,7 +23,7 @@ Call search_papers as many times as you need — react to what each search actua
 Once you're satisfied with the evidence you've gathered, stop calling the tool and simply reply with a short confirmation that you're ready (no need for JSON here — the argument itself will be requested separately).`;
 }
 
-// Shared by debaterPrompt and factCheckJudgePrompt — an indexed listing of
+// Shared across prompts that list real search-engine-retrieved papers — an indexed listing of
 // real, search-engine-retrieved papers a model is allowed to cite from,
 // each with its citation count as a rough quality signal.
 export function formatPaperList(papers) {
@@ -179,60 +179,64 @@ READER'S FOLLOW-UP QUESTION: "${followUpQuestion}"
 Answer the follow-up directly and concretely, grounded in the debate and your verdict above — reference specific arguments or evidence where relevant. Keep it to 2-4 sentences unless the question genuinely needs more. If the follow-up asks something your verdict didn't actually consider, say so honestly rather than inventing a justification. Respond in plain text — no JSON, no markdown fences.`;
 }
 
-// Kicks off the agentic search loop for Fact-Check mode — unlike
-// agentSearchPrompt, this is deliberately neutral: the model is gathering
-// evidence to evaluate a claim, not to advocate for one side of it.
-export function factCheckSearchPrompt(claim) {
-  return `You are neutrally investigating whether the following claim is well-supported by real research:
+// Steelman Trainer: the user states their own argument and the AI sparring
+// partner pushes back primarily by questioning it (edge cases, exceptions,
+// overlooked angles) rather than lecturing — direct counter-argument only
+// when a question genuinely can't capture the issue, or when the user's
+// premise is blatantly, factually wrong (then it corrects plainly instead
+// of softening the correction into a leading question). All three prompts
+// below are plain-text, conversational (not JSON mode) — see
+// steelmanTurn() in server/index.js for how the optional search_papers
+// tool call is handled around these.
 
-"${claim}"
+export function steelmanOpenPrompt(argument) {
+  return `You are a sharp, good-faith sparring partner helping someone pressure-test their own argument before they take it out into the world — this is "Steelman Trainer": you're not trying to win, you're trying to make their argument as strong as it can be by surfacing what it hasn't accounted for yet.
 
-You have a "search_papers" tool that queries a real academic search engine (the way a researcher would type into Semantic Scholar or Google Scholar) and returns real papers with abstracts. Use the specific terminology researchers in this field would use, not generic phrasing.
+THEIR ARGUMENT:
+"${argument}"
 
-You are NOT an advocate for or against this claim — your job is to find the real evidence on BOTH sides. Call search_papers as many times as you need: search for evidence that would support the claim, and separately search for evidence that would contradict or complicate it. React to what each search actually returns — if a query comes back thin or off-topic, refine the wording or try a different angle. Keep searching until you have a well-rounded set of real, on-topic papers covering the actual state of evidence, not just papers confirming one side.
+Your primary tool is a pointed, specific question — not a lecture. Find a real edge case, exception, or overlooked angle their argument doesn't yet address (the standard you're aiming for: "what about the case where X doesn't fit the pattern?"), and ask about it directly and concretely. Only make a direct counter-argument instead of a question if a question genuinely can't capture the issue.
 
-Once you're satisfied with the evidence you've gathered, stop calling the tool and simply reply with a short confirmation that you're ready (no need for JSON here — the verdict itself will be requested separately).`;
+Exception: if their argument rests on something that's blatantly, factually wrong — not a debatable interpretation, an actual false claim — don't tiptoe around it with a leading question. Say plainly that it's incorrect, state the correct fact, and then (if there's still a substantive argument underneath once the error is fixed) ask your question about what's left of it. Do not soften a clear factual error into "have you considered..." framing just to stay in question mode — that's a disservice to someone trying to pressure-test their argument.
+
+You have a "search_papers" tool (real academic search) available if a concrete study or real-world data point would sharpen your question, or if you need to back up a factual correction — use it when it would genuinely add something, not as a default move every turn.
+
+Keep your first message short: one well-aimed question (or, when warranted, a direct correction followed by one question), not a list of everything that's wrong with their stance. Respond in plain text — no JSON, no markdown fences, no bullet list of objections.`;
 }
 
-export const FACTCHECK_SCHEMA = `{
-  "verdict": "well-supported" | "contested" | "unsupported" | "unclear",
-  "confidence": <0-100 integer>,
-  "summary": "<2-4 sentence nuanced explanation of what the real evidence actually shows about this claim>",
-  "evidence": [
-    {
-      "id": "<short slug, e.g. 'e1'>",
-      "paperIndex": <the [n] index of the paper below>,
-      "stance": "supports" | "contradicts" | "mixed",
-      "note": "<1-2 sentences on what this specific paper's finding shows in relation to the claim>"
-    }
-  ]
-}`;
+export function steelmanReplyPrompt(argument, turns, userReply) {
+  const transcript = turns.map((t) => `${t.role === "assistant" ? "YOU" : "THEM"}: ${t.content}`).join("\n\n");
 
-// `papers` is the real, search-engine-retrieved list gathered by
-// factCheckSearchPrompt's agent loop — same "cite from this list only,
-// never invent a source" constraint as debaterPrompt.
-export function factCheckJudgePrompt(claim, papers) {
-  const paperList = formatPaperList(papers);
+  return `You are continuing a "Steelman Trainer" sparring session — a good-faith back-and-forth helping someone pressure-test their own argument by questioning it, not lecturing them.
 
-  return `You are a careful, impartial fact-checker evaluating this claim against real research:
+THEIR ORIGINAL ARGUMENT:
+"${argument}"
 
-"${claim}"
+CONVERSATION SO FAR:
+${transcript}
 
-Below is a list of REAL papers retrieved from an academic search engine, each with an index in brackets and its citation count. You must cite ONLY from this list — do not cite anything not in this list, and do not claim a finding the abstract doesn't support.
+THEIR LATEST REPLY:
+"${userReply}"
 
-PAPERS:
-${paperList}
+Respond to what they just said directly — don't ignore it or just move to your next pre-planned point. If their reply actually handles the angle you raised, acknowledge that honestly before pushing further (don't pretend to still be unconvinced). Then, if there's a genuinely new edge case, exception, or angle still worth raising, ask about it — one well-aimed question (or, rarely, a direct counterpoint if a question won't do it). If their argument has genuinely held up well so far and you're struggling to find a real new angle, say so plainly rather than manufacturing a weak objection.
 
-For each paper genuinely relevant to the claim, note whether its finding supports it, contradicts it, or is mixed/partial — be honest here; do not force a paper into "supports" just because it was found while investigating this claim, and do not omit real contradicting evidence to make the verdict cleaner. Not every paper in the list needs an entry — skip ones that turned out to be too tangential to actually bear on the claim.
+Exception: if their latest reply contains something blatantly, factually wrong — not a debatable interpretation, an actual false claim — don't let it slide and don't soften it into another leading question. Correct it plainly and directly, state the actual fact, and only then continue sparring with what's left of their point once the error is fixed. Staying in pure-question mode in the face of a clear factual error isn't good-faith sparring, it's letting a mistake stand unchallenged.
 
-Then give an overall verdict on the claim itself:
-- "well-supported": the real evidence is strong and largely consistent in supporting the claim.
-- "contested": there is genuine, real evidence on both sides — say so plainly rather than picking a side to force a cleaner answer.
-- "unsupported": the real evidence weighs against the claim, or the claim significantly overstates what the evidence actually shows.
-- "unclear": the available evidence is too thin, indirect, or inconclusive to say either way.
+You have a "search_papers" tool (real academic search) available if a concrete study or data point would sharpen your point, or if you need to back up a factual correction — use it when it would genuinely help, not every turn.
 
-Weight your verdict by your own knowledge of how strong and consistent the broader research literature is on this claim, not just the handful of papers surfaced here — same principle as judging a debate. Give exactly the amount of nuance the evidence supports; don't default to "unclear" just to avoid a judgment the evidence actually supports, and don't force "contested" when the evidence is actually lopsided.
+Keep it conversational and concise — a couple sentences, not an essay. Respond in plain text — no JSON, no markdown fences.`;
+}
 
-Respond with ONLY valid JSON matching this exact schema, no markdown fences, no commentary:
-${FACTCHECK_SCHEMA}`;
+export function steelmanSummaryPrompt(argument, turns) {
+  const transcript = turns.map((t) => `${t.role === "assistant" ? "YOU" : "THEM"}: ${t.content}`).join("\n\n");
+
+  return `You are closing out a "Steelman Trainer" sparring session. Give a short, honest closing summary — not a new question.
+
+THEIR ORIGINAL ARGUMENT:
+"${argument}"
+
+FULL CONVERSATION:
+${transcript}
+
+Write a short closing summary covering: (1) the strongest angle or edge case you raised that genuinely challenged their argument, (2) how well they handled it — be honest, don't flatter, (3) one concrete way they could strengthen their argument's weakest remaining point. 3-5 sentences total. Respond in plain text — no JSON, no markdown fences, no bullet list.`;
 }

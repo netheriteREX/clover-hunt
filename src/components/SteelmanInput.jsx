@@ -6,19 +6,19 @@ import BlurText from "./reactbits/BlurText";
 import BorderGlow from "./reactbits/BorderGlow";
 import SpecularButton from "./reactbits/SpecularButton";
 
-const EXAMPLE_CLAIMS = [
-  "Coffee consumption reduces the risk of type 2 diabetes.",
-  "Meditation measurably reduces long-term anxiety symptoms.",
-  "Standardized testing improves educational outcomes.",
-  "Screen time before bed disrupts sleep quality.",
+const EXAMPLE_ARGUMENTS = [
+  "Remote work should be the default for all office jobs.",
+  "Social media platforms should verify every user's real identity.",
+  "College should be free for everyone.",
+  "Zoos do more harm than good for animal welfare.",
 ];
 
-export default function FactCheckInput({ onSubmit, loading }) {
+export default function SteelmanInput({ onSubmit, loading }) {
   const [value, setValue] = useState("");
   const inputId = useId();
 
-  const submit = (claim) => {
-    const trimmed = (claim ?? value).trim();
+  const submit = (argument) => {
+    const trimmed = (argument ?? value).trim();
     if (!trimmed) return;
     onSubmit(trimmed);
   };
@@ -26,15 +26,15 @@ export default function FactCheckInput({ onSubmit, loading }) {
   return (
     <div className="mx-auto w-full max-w-2xl text-center">
       <BlurText
-        text="Check a claim against real evidence"
+        text="Pressure-test your argument"
         as="h1"
         animateBy="words"
         delay={70}
         className="justify-center font-serif text-2xl font-semibold tracking-tight text-ink sm:text-3xl md:text-4xl"
       />
       <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-ink-muted">
-        One model neutrally gathers real research on both sides of a single claim and gives a
-        direct verdict — faster than a full debate, for when you just need a quick answer.
+        State your position and an AI sparring partner will question it — surfacing edge cases and
+        angles you may not have considered, not just arguing back.
       </p>
 
       <form
@@ -48,7 +48,7 @@ export default function FactCheckInput({ onSubmit, loading }) {
           htmlFor={inputId}
           className="mb-1.5 block text-[11px] font-semibold uppercase tracking-widest text-ink-muted"
         >
-          Claim
+          Your argument
         </Label.Root>
         <BorderGlow
           backgroundColor="#ffffff"
@@ -62,7 +62,7 @@ export default function FactCheckInput({ onSubmit, loading }) {
               id={inputId}
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="e.g. Coffee consumption reduces the risk of type 2 diabetes."
+              placeholder="e.g. Remote work should be the default for all office jobs."
               className="min-w-0 flex-1 bg-transparent px-2.5 py-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
             />
             <SpecularButton
@@ -83,7 +83,7 @@ export default function FactCheckInput({ onSubmit, loading }) {
               autoAnimate
             >
               <motion.span initial="rest" whileHover="hover" animate="rest" className="flex items-center">
-                <span>{loading ? "Checking…" : "Check"}</span>
+                <span>{loading ? "Thinking…" : "Spar"}</span>
                 {!loading && (
                   <motion.span
                     variants={{ rest: { width: 0, opacity: 0, marginLeft: 0 }, hover: { width: 14, opacity: 1, marginLeft: 6 } }}
@@ -101,10 +101,10 @@ export default function FactCheckInput({ onSubmit, loading }) {
 
       <div className="mt-5 text-left">
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-widest text-ink-faint">
-          Example claims
+          Example arguments
         </p>
         <div className="flex flex-wrap gap-2">
-          {EXAMPLE_CLAIMS.map((c) => (
+          {EXAMPLE_ARGUMENTS.map((c) => (
             <button
               key={c}
               onClick={() => {

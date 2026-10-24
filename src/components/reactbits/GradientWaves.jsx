@@ -152,10 +152,12 @@ const GradientWaves = ({
   parallaxStrength = 0.5,
   grain = true,
   grainIntensity = 0.05,
+  active = true,
   className = "",
 }) => {
   const containerRef = useRef(null);
   const enableMouseRef = useRef(mouseInteraction);
+  const activeRef = useRef(active);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -259,7 +261,7 @@ const GradientWaves = ({
     };
 
     const tryStart = () => {
-      if (isVisible && isPageVisible && raf === 0) raf = requestAnimationFrame(loop);
+      if (isVisible && isPageVisible && activeRef.current && raf === 0) raf = requestAnimationFrame(loop);
     };
     const tryStop = () => {
       if (raf !== 0) {
@@ -267,6 +269,8 @@ const GradientWaves = ({
         raf = 0;
       }
     };
+    ctxMap.get(container).tryStart = tryStart;
+    ctxMap.get(container).tryStop = tryStop;
 
     const io = new IntersectionObserver(
       ([entry]) => {
@@ -311,6 +315,11 @@ const GradientWaves = ({
     const u = program.uniforms;
 
     enableMouseRef.current = mouseInteraction;
+
+    if (activeRef.current !== active) {
+      activeRef.current = active;
+      active ? ctx.tryStart?.() : ctx.tryStop?.();
+    }
 
     u.uSpeed.value = speed;
     u.uAmplitude.value = amplitude;
@@ -365,6 +374,7 @@ const GradientWaves = ({
     grainIntensity,
     mouseInteraction,
     parallaxStrength,
+    active,
   ]);
 
   return <div ref={containerRef} className={`gradient-waves-container ${className}`.trim()} />;

@@ -170,3 +170,96 @@ export function exportDebateAsPdf(debate) {
 
   doc.save(reportFilename(debate.question, "pdf"));
 }
+
+// `steelman` is { argument, turns, summary } — turns is the full
+// assistant/user transcript, summary may be null if the session was
+// exported before being wrapped up.
+export function exportSteelmanAsPdf(steelman) {
+  const doc = new jsPDF({ unit: "pt", format: "letter" });
+  let y = MARGIN;
+
+  const ensureSpace = (needed) => {
+    if (y + needed > PAGE_HEIGHT - MARGIN) {
+      doc.addPage();
+      y = MARGIN;
+    }
+  };
+
+  const heading = (text, size = 13, color = INK) => {
+    ensureSpace(size + 10);
+    doc.setFont("times", "bold");
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    doc.text(sanitizeForPdf(text), MARGIN, y);
+    y += size + 8;
+  };
+
+  const paragraph = (text, { size = 10, color = INK_MUTED, font = "helvetica", style = "normal", gap = 14 } = {}) => {
+    doc.setFont(font, style);
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(sanitizeForPdf(text), CONTENT_WIDTH);
+    for (const line of lines) {
+      ensureSpace(size + 4);
+      doc.text(line, MARGIN, y);
+      y += size + 4;
+    }
+    y += gap - (size + 4);
+    y += 4;
+  };
+
+  const rule = (color = [209, 221, 201]) => {
+    ensureSpace(14);
+    doc.setDrawColor(...color);
+    doc.setLineWidth(0.75);
+    doc.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
+    y += 16;
+  };
+
+  doc.setFillColor(...GOLD);
+  doc.rect(0, 0, PAGE_WIDTH, 8, "F");
+  y = MARGIN;
+
+  doc.setFont("times", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(...INK);
+  doc.text("Clover Hunt", MARGIN, y);
+  y += 20;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...INK_MUTED);
+  doc.text(
+    `Steelman Trainer session - generated ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}`,
+    MARGIN,
+    y,
+  );
+  y += 24;
+
+  heading("Your argument", 11, INK_MUTED);
+  paragraph(steelman.argument, { size: 14, font: "times", style: "bold", color: INK, gap: 18 });
+  rule();
+
+  steelman.turns.forEach((t) => {
+    const isAssistant = t.role === "assistant";
+    heading(isAssistant ? "Sparring partner" : "You", 10.5, isAssistant ? GOLD : INK);
+    paragraph(t.content, { gap: 10 });
+    if (t.citation) {
+      const citeLine = `${t.citation.authors} (${t.citation.year}) - ${t.citation.title}`;
+      paragraph(citeLine, { size: 9, style: "bold", gap: 6 });
+      if (t.citation.url) {
+        paragraph(t.citation.url, { size: 9, color: GREEN, gap: 10 });
+      }
+    }
+    y += 4;
+  });
+
+  rule();
+
+  if (steelman.summary) {
+    heading("Session summary", 13, GOLD);
+    paragraph(steelman.summary, { gap: 14 });
+  }
+
+  doc.save(reportFilename(steelman.argument, "pdf"));
+}

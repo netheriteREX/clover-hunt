@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Trash2, History as HistoryIcon, Inbox } from "lucide-react";
+import { X, Trash2, History as HistoryIcon, Inbox, MessageCircleQuestion } from "lucide-react";
 
 const VERDICT_STYLE = {
   model1: { text: "text-model1", bg: "bg-model1-soft", border: "border-model1-border" },
@@ -46,6 +46,9 @@ export default function HistoryPanel({ open, onOpenChange, entries, onLoad, onDe
             ) : (
               <ul className="space-y-2">
                 {entries.map((entry) => {
+                  // Entries saved before Steelman Trainer existed have no
+                  // `kind` field — treat those as debates.
+                  const kind = entry.kind || "debate";
                   const verdict = entry.debate?.model3?.verdict;
                   const style = VERDICT_STYLE[verdict?.winningSide] || VERDICT_STYLE.mixed;
                   return (
@@ -60,17 +63,23 @@ export default function HistoryPanel({ open, onOpenChange, entries, onLoad, onDe
                         <p className="text-[13px] font-medium leading-snug text-ink">{entry.question}</p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-2">
                           <span className="text-[11px] text-ink-faint">{formatDate(entry.savedAt)}</span>
-                          {verdict && (
-                            <span
-                              className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${style.text} ${style.bg} ${style.border}`}
-                            >
-                              {verdict.winningSide === "mixed"
-                                ? "Mixed"
-                                : verdict.winningSide === "model1"
-                                  ? "Model 1"
-                                  : "Model 2"}{" "}
-                              · {verdict.confidence}%
+                          {kind === "steelman" ? (
+                            <span className="flex items-center gap-1 rounded-full border border-gold-border bg-gold-soft px-2 py-0.5 text-[10px] font-medium text-gold">
+                              <MessageCircleQuestion size={10} /> Steelman
                             </span>
+                          ) : (
+                            verdict && (
+                              <span
+                                className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${style.text} ${style.bg} ${style.border}`}
+                              >
+                                {verdict.winningSide === "mixed"
+                                  ? "Mixed"
+                                  : verdict.winningSide === "model1"
+                                    ? "Model 1"
+                                    : "Model 2"}{" "}
+                                · {verdict.confidence}%
+                              </span>
+                            )
                           )}
                         </div>
                       </button>

@@ -29,9 +29,27 @@ export function saveDebateToHistory(question, debate) {
   const entries = readAll();
   const entry = {
     id: crypto.randomUUID(),
+    kind: "debate",
     question,
     savedAt: Date.now(),
     debate,
+  };
+  const next = [entry, ...entries].slice(0, MAX_ENTRIES);
+  writeAll(next);
+  return entry;
+}
+
+// Saved once a Steelman Trainer session has a closing summary — in-progress
+// sessions aren't persisted, same as debates only save once a full verdict
+// exists.
+export function saveSteelmanToHistory(argument, steelman) {
+  const entries = readAll();
+  const entry = {
+    id: crypto.randomUUID(),
+    kind: "steelman",
+    question: argument,
+    savedAt: Date.now(),
+    steelman,
   };
   const next = [entry, ...entries].slice(0, MAX_ENTRIES);
   writeAll(next);

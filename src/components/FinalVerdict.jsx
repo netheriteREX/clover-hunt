@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import * as Separator from "@radix-ui/react-separator";
-import { Swords, Gavel, Sparkles } from "lucide-react";
+import { Swords, Gavel, Sparkles, Info } from "lucide-react";
 import CountUp from "./reactbits/CountUp";
 
 export default function FinalVerdict({ verdict }) {
@@ -75,6 +75,11 @@ export default function FinalVerdict({ verdict }) {
           </ul>
         </div>
       )}
+
+      <p className="mt-4 flex items-start gap-1.5 text-[10.5px] leading-relaxed text-ink-faint">
+        <Info size={11} className="mt-0.5 shrink-0" />
+        This verdict is AI-generated. The citations are real, but the judgment itself can be wrong — treat it as a starting point, not a final word.
+      </p>
     </motion.div>
   );
 }

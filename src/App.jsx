@@ -14,8 +14,8 @@ import {
   Share2,
   Check,
   Swords,
-  ScanSearch,
-  Loader2,
+  MessageCircleQuestion,
+  Info,
 } from "lucide-react";
 import DebateInput from "./components/DebateInput";
 import DebateTree from "./components/DebateTree";
@@ -24,12 +24,14 @@ import FinalVerdict from "./components/FinalVerdict";
 import FollowUpChat from "./components/FollowUpChat";
 import HistoryPanel from "./components/HistoryPanel";
 import CitationExportModal from "./components/CitationExportModal";
-import FactCheckInput from "./components/FactCheckInput";
-import FactCheckResult from "./components/FactCheckResult";
+import SteelmanInput from "./components/SteelmanInput";
+import SteelmanChat from "./components/SteelmanChat";
+import DisclaimerModal from "./components/DisclaimerModal";
 import ShinyText from "./components/reactbits/ShinyText";
 import GradientWaves from "./components/reactbits/GradientWaves";
-import { getHistory, saveDebateToHistory, deleteFromHistory, clearHistory } from "./lib/history";
-import { exportDebateAsPdf } from "./lib/exportPdf";
+import { getHistory, saveDebateToHistory, saveSteelmanToHistory, deleteFromHistory, clearHistory } from "./lib/history";
+import { hasSeenDisclaimer, markDisclaimerSeen } from "./lib/disclaimer";
+import { exportDebateAsPdf, exportSteelmanAsPdf } from "./lib/exportPdf";
 import { exportDebateAsDocx } from "./lib/exportDocx";
 import { encodeDebateToUrl, decodeDebateFromHash } from "./lib/shareLink";
 
@@ -42,7 +44,9 @@ async function fetchJson(url, body) {
     body: JSON.stringify(body),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Request failed.");
+  if (!res.ok) {
+    throw new Error(data.error || "Request failed.");
+  }
   return data;
 }
 
@@ -56,18 +60,25 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [citationModalOpen, setCitationModalOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
 
-  // Fact-Check mode — a separate, lighter-weight flow alongside the full
+  // Steelman Trainer — a separate conversational flow alongside the full
   // debate above. Kept as its own state rather than overloading `debate`,
   // since the two have different shapes and can coexist independently
-  // (switching modes doesn't need to clear either one).
+  // (switching modes doesn't need to clear either one). Turns are sent
+  // back to the server in full each call (stateless), same pattern as
+  // debate's follow-up chat.
   const [mode, setMode] = useState("debate");
-  const [factCheck, setFactCheck] = useState(null);
-  const [factCheckLoading, setFactCheckLoading] = useState(false);
-  const [factCheckError, setFactCheckError] = useState(null);
+  const [steelmanArgument, setSteelmanArgument] = useState("");
+  const [steelmanTurns, setSteelmanTurns] = useState([]);
+  const [steelmanSummary, setSteelmanSummary] = useState(null);
+  const [steelmanLoading, setSteelmanLoading] = useState(false);
+  const [steelmanSummarizing, setSteelmanSummarizing] = useState(false);
+  const [steelmanError, setSteelmanError] = useState(null);
 
   useEffect(() => {
     setHistory(getHistory());
+    if (!hasSeenDisclaimer()) setDisclaimerOpen(true);
 
     // A debate can arrive packed into the URL itself (see "Share" below) —
     // load it straight into view. Not saved to history: this browser
@@ -178,23 +189,61 @@ export default function App() {
     }
   };
 
-  const handleFactCheckSubmit = async (claim) => {
-    setFactCheckLoading(true);
-    setFactCheckError(null);
-    setFactCheck(null);
+  const handleSteelmanSubmit = async (argument) => {
+    setSteelmanArgument(argument);
+    setSteelmanTurns([]);
+    setSteelmanSummary(null);
+    setSteelmanError(null);
+    setSteelmanLoading(true);
     try {
-      const data = await fetchJson("/api/factcheck", { claim });
-      setFactCheck(data);
+      const data = await fetchJson("/api/steelman", { argument, turns: [], action: "open" });
+      setSteelmanTurns([{ role: "assistant", content: data.reply, citation: data.citation || null }]);
     } catch (err) {
-      setFactCheckError(err.message);
+      setSteelmanError(err.message);
+      setSteelmanArgument("");
     } finally {
-      setFactCheckLoading(false);
+      setSteelmanLoading(false);
     }
   };
 
-  const resetFactCheck = () => {
-    setFactCheck(null);
-    setFactCheckError(null);
+  const handleSteelmanReply = async (text) => {
+    const turnsSoFar = [...steelmanTurns, { role: "user", content: text }];
+    setSteelmanTurns(turnsSoFar);
+    setSteelmanLoading(true);
+    try {
+      const data = await fetchJson("/api/steelman", {
+        argument: steelmanArgument,
+        turns: steelmanTurns,
+        userReply: text,
+        action: "reply",
+      });
+      setSteelmanTurns([...turnsSoFar, { role: "assistant", content: data.reply, citation: data.citation || null }]);
+    } catch (err) {
+      setSteelmanError(err.message);
+    } finally {
+      setSteelmanLoading(false);
+    }
+  };
+
+  const handleSteelmanWrapUp = async () => {
+    setSteelmanSummarizing(true);
+    try {
+      const data = await fetchJson("/api/steelman", { argument: steelmanArgument, turns: steelmanTurns, action: "summarize" });
+      setSteelmanSummary(data.summary);
+      saveSteelmanToHistory(steelmanArgument, { argument: steelmanArgument, turns: steelmanTurns, summary: data.summary });
+      setHistory(getHistory());
+    } catch (err) {
+      setSteelmanError(err.message);
+    } finally {
+      setSteelmanSummarizing(false);
+    }
+  };
+
+  const resetSteelman = () => {
+    setSteelmanArgument("");
+    setSteelmanTurns([]);
+    setSteelmanSummary(null);
+    setSteelmanError(null);
   };
 
   const handleShare = async () => {
@@ -209,8 +258,18 @@ export default function App() {
   };
 
   const loadFromHistory = (entry) => {
-    setError(null);
-    setDebate(entry.debate);
+    const kind = entry.kind || "debate";
+    if (kind === "steelman") {
+      setSteelmanError(null);
+      setSteelmanArgument(entry.steelman.argument);
+      setSteelmanTurns(entry.steelman.turns);
+      setSteelmanSummary(entry.steelman.summary);
+      setMode("steelman");
+    } else {
+      setError(null);
+      setDebate(entry.debate);
+      setMode("debate");
+    }
     setHistoryOpen(false);
   };
 
@@ -224,11 +283,16 @@ export default function App() {
     setHistory([]);
   };
 
-  const showWaves = !debate && !loading && !factCheck && !factCheckLoading;
-  const onBlankScreen = !debate && !loading && !factCheck && !factCheckLoading;
+  const acknowledgeDisclaimer = () => {
+    markDisclaimerSeen();
+    setDisclaimerOpen(false);
+  };
+
+  const showWaves = !debate && !loading && !steelmanArgument;
+  const onBlankScreen = !debate && !loading && !steelmanArgument;
 
   return (
-    <div className="relative min-h-screen bg-paper text-ink" data-theme={mode === "factcheck" ? "lavender" : undefined}>
+    <div className="relative min-h-screen bg-paper text-ink" data-theme={mode === "steelman" ? "lavender" : undefined}>
       {/* Fixed to the viewport (not the scrolling content) so it always
           covers the full screen and never clips or scrolls away, and sits
           behind everything else via the z-10 wrapper below. */}
@@ -257,11 +321,12 @@ export default function App() {
               mouseInteraction
               parallaxStrength={0.3}
               grain={false}
+              active={mode === "debate"}
             />
           </motion.div>
           <motion.div
             className="absolute inset-0"
-            animate={{ opacity: mode === "factcheck" ? 1 : 0 }}
+            animate={{ opacity: mode === "steelman" ? 1 : 0 }}
             transition={{ duration: 0.6, ease: "easeInOut" }}
           >
             <GradientWaves
@@ -277,6 +342,7 @@ export default function App() {
               mouseInteraction
               parallaxStrength={0.3}
               grain={false}
+              active={mode === "steelman"}
             />
           </motion.div>
         </div>
@@ -319,12 +385,12 @@ export default function App() {
                   <Swords size={13} /> Debate
                 </button>
                 <button
-                  onClick={() => setMode("factcheck")}
+                  onClick={() => setMode("steelman")}
                   className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-[12px] font-medium transition ${
-                    mode === "factcheck" ? "bg-gold-soft text-gold" : "text-ink-muted hover:text-ink"
+                    mode === "steelman" ? "bg-gold-soft text-gold" : "text-ink-muted hover:text-ink"
                   }`}
                 >
-                  <ScanSearch size={13} /> Fact Check
+                  <MessageCircleQuestion size={13} /> Steelman Trainer
                 </button>
               </div>
 
@@ -340,11 +406,11 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  <FactCheckInput onSubmit={handleFactCheckSubmit} loading={factCheckLoading} />
-                  {factCheckError && (
+                  <SteelmanInput onSubmit={handleSteelmanSubmit} loading={steelmanLoading} />
+                  {steelmanError && (
                     <div className="flex max-w-xl items-start gap-2 rounded-lg border border-danger/25 bg-danger-soft px-4 py-3 text-left text-[13px] text-danger">
                       <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-                      <p>{factCheckError}</p>
+                      <p>{steelmanError}</p>
                     </div>
                   )}
                 </>
@@ -352,38 +418,50 @@ export default function App() {
             </motion.div>
           )}
 
-          {factCheckLoading && (
+          {steelmanArgument && (
             <motion.div
-              key="factcheck-loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex min-h-[60vh] flex-col items-center justify-center gap-4 py-8"
-            >
-              <Loader2 size={28} className="animate-spin text-gold" />
-              <ShinyText text="Gathering real evidence on both sides of this claim…" className="text-[11px]" speed={2.8} />
-            </motion.div>
-          )}
-
-          {factCheck && !factCheckLoading && (
-            <motion.div
-              key="factcheck-results"
+              key="steelman-chat"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="space-y-8"
+              className="space-y-6"
             >
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
                 <button
-                  onClick={resetFactCheck}
-                  aria-label="New claim"
+                  onClick={() =>
+                    exportSteelmanAsPdf({ argument: steelmanArgument, turns: steelmanTurns, summary: steelmanSummary })
+                  }
+                  disabled={steelmanTurns.length === 0}
+                  aria-label="Export session"
+                  className="flex shrink-0 items-center gap-1.5 rounded-md border border-hairline-strong bg-paper-raised px-3 py-2 text-[11px] font-medium text-ink-muted transition hover:border-gold-border hover:text-gold disabled:opacity-50 sm:text-[12px]"
+                >
+                  <FileDown size={13} /> <span>Export PDF</span>
+                </button>
+                <button
+                  onClick={resetSteelman}
+                  aria-label="New argument"
                   className="flex shrink-0 items-center gap-1.5 rounded-md border border-hairline-strong bg-paper-raised px-3 py-2 text-[11px] font-medium text-ink-muted transition hover:border-gold-border hover:text-gold sm:text-[12px]"
                 >
-                  <RotateCcw size={13} /> <span>New claim</span>
+                  <RotateCcw size={13} /> <span>New argument</span>
                 </button>
               </div>
 
-              <FactCheckResult result={factCheck} />
+              {steelmanError && (
+                <div className="mx-auto flex max-w-2xl items-start gap-2 rounded-lg border border-danger/25 bg-danger-soft px-4 py-3 text-left text-[13px] text-danger">
+                  <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+                  <p>{steelmanError}</p>
+                </div>
+              )}
+
+              <SteelmanChat
+                argument={steelmanArgument}
+                turns={steelmanTurns}
+                onReply={handleSteelmanReply}
+                onWrapUp={handleSteelmanWrapUp}
+                loading={steelmanLoading}
+                summarizing={steelmanSummarizing}
+                summary={steelmanSummary}
+              />
             </motion.div>
           )}
 
@@ -496,7 +574,17 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
+
+      <footer className="mx-auto max-w-6xl px-4 pb-8 sm:px-6">
+        <p className="flex items-center justify-center gap-1.5 text-center text-[10.5px] leading-relaxed text-ink-faint">
+          <Info size={12} className="shrink-0" />
+          Clover Hunt uses AI models, which can make mistakes. Citations link to real papers, but
+          arguments, verdicts, and summaries are AI-generated — verify anything important before relying on it.
+        </p>
+      </footer>
       </div>
+
+      <DisclaimerModal open={disclaimerOpen} onAcknowledge={acknowledgeDisclaimer} />
 
       <CitationExportModal open={citationModalOpen} onOpenChange={setCitationModalOpen} debate={debate} />
 

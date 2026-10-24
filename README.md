@@ -13,8 +13,8 @@ Ask a debatable question and three AI agents get to work:
 - **Two debaters** independently research and argue opposite stances, each backing every claim with a real paper it found itself (via an agentic search loop — no invented citations).
 - **A judge** scores each side's evidence quality *and* argument quality separately, then delivers a verdict on which position the actual body of evidence supports.
 
-### 🔍 Fact Check mode
-Paste a single claim and one agent neutrally gathers real evidence for *and* against it, then returns a direct verdict — well-supported, contested, unsupported, or unclear — with citations tagged by which way they point. No adversarial framing, just a fast, grounded answer.
+### 🤺 Steelman Trainer
+State your own argument and an AI sparring partner pushes back on it — mainly by asking pointed questions that surface edge cases, exceptions, and angles you may not have considered, rather than lecturing you. It can back a challenge with a real cited paper when one genuinely helps. End the session for a short closing summary of the strongest point raised and how your argument held up.
 
 Every review can be exported (PDF, Word), its citations exported (APA, MLA, Chicago, BibTeX), or shared with a link that reproduces the exact same result for anyone who opens it.
 
@@ -22,14 +22,14 @@ Every review can be exported (PDF, Word), its citations exported (APA, MLA, Chic
 
 - **Frontend**: React 19, Vite, Tailwind CSS v4
 - **Backend**: Express (`server/index.js`), fully stateless
-- **AI**: [Mistral AI](https://mistral.ai) — a small model drives the agentic evidence search and argument writing, a larger model handles judging
+- **AI**: [Claude](https://www.anthropic.com/claude) via the Anthropic API — a smaller/faster model drives the agentic evidence search, argument writing, and sparring turns, a larger model handles judging and closing summaries
 - **Evidence source**: [OpenAlex](https://openalex.org) — a free, open academic search API; results are filtered to exclude retracted papers and unreviewed preprints, and ranked by topical relevance (citation count is only ever a tiebreaker)
 
 ## Getting started
 
 ### Prerequisites
 - Node.js 18+
-- A [Mistral AI API key](https://console.mistral.ai/)
+- An [Anthropic API key](https://console.anthropic.com/)
 
 ### Setup
 
@@ -40,12 +40,12 @@ npm install
 Create `server/.env`:
 
 ```env
-MISTRAL_API_KEY=your-mistral-api-key
+ANTHROPIC_API_KEY=your-anthropic-api-key
 
 # Optional overrides — sensible defaults are used if omitted
 # PORT=8787
-# MISTRAL_MODEL_SMALL=mistral-small-latest
-# MISTRAL_MODEL_JUDGE=mistral-large-latest
+# ANTHROPIC_MODEL_SMALL=claude-haiku-4-5-20251001
+# ANTHROPIC_MODEL_JUDGE=claude-sonnet-5
 
 # Optional — moves OpenAlex requests into its faster "polite pool"
 # OPENALEX_MAILTO=you@example.com
