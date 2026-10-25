@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node server/index.js",
+    "package:lambda": "node scripts/package-lambda.mjs",
     "dev:all": "concurrently -n web,api -c blue,green \"npm:dev\" \"npm:server\"",
     "build": "vite build",
     "lint": "oxlint",
@@ -31,6 +32,7 @@
     "ogl": "^1.0.11",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "serverless-http": "^4.0.0",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {

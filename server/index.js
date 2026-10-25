@@ -41,7 +41,10 @@ const MAX_TOKENS_JUDGE = 8192; // critiques for every argument on both sides + v
 const MAX_TOKENS_TEXT = 1024; // follow-up answers, steelman replies/summaries — plain text
 
 const app = express();
-app.use(cors());
+// ALLOWED_ORIGINS (comma-separated) locks CORS to the deployed frontend;
+// unset, any origin is allowed, which is what local dev wants.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
+app.use(cors(allowedOrigins.length > 0 ? { origin: allowedOrigins } : undefined));
 app.use(express.json());
 
 // Logs every API call's request and response body as JSON, so they show up
@@ -527,6 +530,12 @@ app.post("/api/steelman", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Debate API listening on http://localhost:${PORT}`);
-});
+// Under AWS Lambda, server/lambda.js wraps `app` as the handler instead —
+// Lambda supplies the HTTP layer, so there's no port to listen on.
+if (!process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  app.listen(PORT, () => {
+    console.log(`Debate API listening on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

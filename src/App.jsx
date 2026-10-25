@@ -37,13 +37,25 @@ import { encodeDebateToUrl, decodeDebateFromHash } from "./lib/shareLink";
 
 const IDLE_STATUS = { model1: "idle", model2: "idle", judge: "idle" };
 
+// Empty in local dev (Vite proxies /api to the backend); on the deployed
+// static site, set VITE_API_URL to the backend's origin, e.g. a Lambda
+// Function URL, since Amplify Hosting itself can't run server/index.js.
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
 async function fetchJson(url, body) {
-  const res = await fetch(url, {
+  const res = await fetch(`${API_BASE}${url}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(
+      `The server returned a non-JSON response (HTTP ${res.status}). The API backend may be unreachable or misconfigured.`,
+    );
+  }
   if (!res.ok) {
     throw new Error(data.error || "Request failed.");
   }
@@ -310,17 +322,15 @@ export default function App() {
           >
             <GradientWaves
               horizonColor="#f6efdc"
-              waveColor="#123d24"
-              crestColor="#2a6b3f"
-              speed={0.25}
+              waveColor="#3a8a5a"
+              crestColor="#58a577"
+              speed={0.4}
               amplitude={2.5}
-              fogDepth={26}
-              detail="high"
-              brightness={1.35}
-              opacity={0.9}
+              relief={0.7}
+              lightAngle={120}
               mouseInteraction
-              parallaxStrength={0.3}
-              grain={false}
+              fogDepth={55}
+              tilt={40}
               active={mode === "debate"}
             />
           </motion.div>
@@ -330,18 +340,16 @@ export default function App() {
             transition={{ duration: 0.6, ease: "easeInOut" }}
           >
             <GradientWaves
-              horizonColor="#f0ebf4"
-              waveColor="#523766"
-              crestColor="#a66fce"
-              speed={0.25}
+              horizonColor="#a855f7"
+              waveColor="#c673e8"
+              crestColor="#e8aaf6"
+              speed={0.4}
               amplitude={2.5}
-              fogDepth={26}
-              detail="high"
-              brightness={1.35}
-              opacity={0.9}
+              relief={0.7}
+              lightAngle={120}
               mouseInteraction
-              parallaxStrength={0.3}
-              grain={false}
+              fogDepth={55}
+              tilt={40}
               active={mode === "steelman"}
             />
           </motion.div>

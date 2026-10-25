@@ -1,6 +1,7 @@
 // Adapted from React Bits (https://reactbits.dev) — Backgrounds/GradientWaves.
-// Unmodified WebGL/logic from upstream; only the default colors are swapped
-// for the app's green theme instead of the library's purple/pink defaults.
+// Default colors are swapped for the app's green theme instead of the
+// library's purple/pink defaults, and relief shading (relief / lightAngle),
+// click swells (swellOnClick) and a degrees-based tilt are added on top.
 import { useEffect, useRef } from "react";
 import { Renderer, Program, Mesh, Triangle } from "ogl";
 import "./GradientWaves.css";
@@ -49,6 +50,9 @@ uniform bool uEnableMouse;
 uniform vec3 uHorizonColor;
 uniform vec3 uWaveColor;
 uniform vec3 uCrestColor;
+uniform float uRelief;
+uniform float uLightAngle;
+uniform float uPulse;
 out vec4 fragColor;
 
 const float MAX_DIST = 20000.0;
@@ -64,7 +68,8 @@ float plasma(vec3 r, vec2 freq, vec4 tc) {
   mx += uSwell * sin((r.y + mx) / 20.0 + tc.y);
   float my = r.y - tc.z;
   my += uTurbulence * cos(r.x / 23.0 + tc.w);
-  return r.z - (sin(mx * freq.x) * uAmplitude + sin(my * freq.y) * uAmplitude + uHeight);
+  float amp = uAmplitude * (1.0 + uPulse);
+  return r.z - (sin(mx * freq.x) * amp + sin(my * freq.y) * amp + uHeight);
 }
 
 float raymarch(vec3 pos, vec3 dir, vec2 freq, vec4 tc) {
@@ -116,6 +121,19 @@ void main() {
   float t = clamp(uFogDepth / max(dist, 0.001), 0.0, 1.0);
   vec3 body = mix(uWaveColor, uCrestColor, clamp(pos.z * 0.08 + 0.5, 0.0, 1.0));
   vec3 col = mix(uHorizonColor, body, t);
+  if (uRelief > 0.0 && dist < MAX_DIST) {
+    // Surface normal from the height field's gradient, lit by a directional
+    // light whose azimuth is uLightAngle — gives the waves a sculpted look.
+    vec2 e = vec2(0.3, 0.0);
+    vec3 n = normalize(vec3(
+      plasma(pos + e.xyy, freq, tc) - plasma(pos - e.xyy, freq, tc),
+      plasma(pos + e.yxy, freq, tc) - plasma(pos - e.yxy, freq, tc),
+      plasma(pos + e.yyx, freq, tc) - plasma(pos - e.yyx, freq, tc)
+    ));
+    vec3 L = normalize(vec3(cos(uLightAngle), sin(uLightAngle), 0.8));
+    float shade = clamp(dot(n, L), 0.0, 1.0);
+    col *= mix(1.0, 0.55 + 0.9 * shade, clamp(uRelief, 0.0, 1.0));
+  }
   col *= uBrightness;
   col = clamp(col, 0.0, 1.0);
 
@@ -141,7 +159,10 @@ const GradientWaves = ({
   waveRatio = 0.9,
   swell = 35,
   turbulence = 20,
-  tilt = 1.11,
+  tilt = 63.6, // degrees
+  relief = 0,
+  lightAngle = 120, // degrees
+  swellOnClick = false,
   zoom = 1.0,
   height = 5.5,
   fogDepth = 15,
@@ -158,6 +179,7 @@ const GradientWaves = ({
   const containerRef = useRef(null);
   const enableMouseRef = useRef(mouseInteraction);
   const activeRef = useRef(active);
+  const swellOnClickRef = useRef(swellOnClick);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -207,6 +229,9 @@ const GradientWaves = ({
         uHorizonColor: { value: new Float32Array([1, 1, 1]) },
         uWaveColor: { value: new Float32Array([1, 1, 1]) },
         uCrestColor: { value: new Float32Array([1, 1, 1]) },
+        uRelief: { value: 0 },
+        uLightAngle: { value: 0 },
+        uPulse: { value: 0 },
       },
     });
 
@@ -243,12 +268,25 @@ const GradientWaves = ({
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerleave", onPointerLeave);
 
+    // Listens on window, not the canvas — in the app the canvas sits behind
+    // the page content (pointer-events: none), so it never gets clicks itself.
+    let pulse = 0;
+    const onPointerDown = () => {
+      if (swellOnClickRef.current) pulse = 1;
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+
     let raf = 0;
     let isVisible = true;
     let isPageVisible = !document.hidden;
     const t0 = performance.now();
+    let lastT = t0;
 
     const loop = (t) => {
+      const dt = Math.min((t - lastT) * 0.001, 0.1);
+      lastT = t;
+      pulse *= Math.exp(-dt * 2.5);
+      program.uniforms.uPulse.value = pulse;
       program.uniforms.iTime.value = (t - t0) * 0.001;
       const tx = enableMouseRef.current ? targetMouse[0] : 0.5;
       const ty = enableMouseRef.current ? targetMouse[1] : 0.5;
@@ -294,6 +332,7 @@ const GradientWaves = ({
       ro.disconnect();
       io.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pointerdown", onPointerDown);
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerleave", onPointerLeave);
       ctxMap.delete(container);
@@ -316,10 +355,11 @@ const GradientWaves = ({
 
     enableMouseRef.current = mouseInteraction;
 
-    if (activeRef.current !== active) {
-      activeRef.current = active;
-      active ? ctx.tryStart?.() : ctx.tryStop?.();
-    }
+    // Re-asserted on every run (tryStart/tryStop are idempotent) rather than
+    // only when `active` flips, so an instance that mounted inactive can't
+    // be left stalled by a missed transition.
+    activeRef.current = active;
+    active ? ctx.tryStart?.() : ctx.tryStop?.();
 
     u.uSpeed.value = speed;
     u.uAmplitude.value = amplitude;
@@ -327,7 +367,10 @@ const GradientWaves = ({
     u.uWaveRatio.value = waveRatio;
     u.uSwell.value = swell;
     u.uTurbulence.value = turbulence;
-    u.uTilt.value = tilt;
+    u.uTilt.value = (tilt * Math.PI) / 180;
+    u.uRelief.value = relief;
+    u.uLightAngle.value = (lightAngle * Math.PI) / 180;
+    swellOnClickRef.current = swellOnClick;
     u.uZoom.value = zoom;
     u.uHeight.value = height;
     u.uFogDepth.value = fogDepth;
@@ -364,6 +407,9 @@ const GradientWaves = ({
     swell,
     turbulence,
     tilt,
+    relief,
+    lightAngle,
+    swellOnClick,
     zoom,
     height,
     fogDepth,
